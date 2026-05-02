@@ -1,0 +1,1973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NOVA ENTERTAINMENT — Agency Management System</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080a0f;
+    --surface: #0d1018;
+    --surface2: #131720;
+    --border: #1e2535;
+    --accent: #e8c44a;
+    --accent2: #4af0c4;
+    --accent3: #f04a7a;
+    --text: #e8eaf0;
+    --text-muted: #6b7590;
+    --text-dim: #3a4260;
+    --success: #4af0c4;
+    --danger: #f04a7a;
+    --warning: #e8c44a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Noise overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.5;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 40px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(232,196,74,0.04) 0%, transparent 100%);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(20px);
+  }
+
+  .logo {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .logo-main {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .logo-sub {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-weight: 300;
+  }
+
+  .db-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    transition: all 0.3s;
+  }
+
+  .status-dot.online { background: var(--success); box-shadow: 0 0 8px var(--success); }
+
+  /* LAYOUT */
+  .app {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    min-height: calc(100vh - 73px);
+  }
+
+  /* SIDEBAR */
+  nav {
+    border-right: 1px solid var(--border);
+    padding: 30px 0;
+    position: sticky;
+    top: 73px;
+    height: calc(100vh - 73px);
+    overflow-y: auto;
+  }
+
+  .nav-section {
+    padding: 0 20px;
+    margin-bottom: 30px;
+  }
+
+  .nav-label {
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    font-weight: 500;
+    margin-bottom: 10px;
+    padding-left: 14px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13.5px;
+    font-weight: 400;
+    color: var(--text-muted);
+    transition: all 0.2s;
+    border: 1px solid transparent;
+    margin-bottom: 2px;
+    user-select: none;
+  }
+
+  .nav-item:hover {
+    background: var(--surface);
+    color: var(--text);
+    border-color: var(--border);
+  }
+
+  .nav-item.active {
+    background: rgba(232,196,74,0.08);
+    color: var(--accent);
+    border-color: rgba(232,196,74,0.2);
+    font-weight: 500;
+  }
+
+  .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+  /* MAIN */
+  main {
+    padding: 36px 40px;
+    overflow-y: auto;
+  }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 32px;
+  }
+
+  .page-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 42px;
+    letter-spacing: 3px;
+    line-height: 1;
+    color: var(--text);
+  }
+
+  .page-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    font-weight: 300;
+  }
+
+  /* STATS BAR */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .stat-card.gold::before { background: var(--accent); }
+  .stat-card.teal::before { background: var(--accent2); }
+  .stat-card.pink::before { background: var(--accent3); }
+  .stat-card.blue::before { background: #4a90f0; }
+
+  .stat-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+
+  .stat-card.gold .stat-value { color: var(--accent); }
+  .stat-card.teal .stat-value { color: var(--accent2); }
+  .stat-card.pink .stat-value { color: var(--accent3); }
+  .stat-card.blue .stat-value { color: #4a90f0; }
+
+  /* SECTIONS */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+
+  /* TABLES */
+  .table-wrap { overflow-x: auto; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead th {
+    padding: 12px 20px;
+    text-align: left;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    font-weight: 500;
+    background: var(--surface2);
+    white-space: nowrap;
+  }
+
+  tbody tr {
+    border-top: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+  td {
+    padding: 13px 20px;
+    color: var(--text);
+    vertical-align: middle;
+  }
+
+  td:first-child { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-muted); }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-gold { background: rgba(232,196,74,0.12); color: var(--accent); border: 1px solid rgba(232,196,74,0.25); }
+  .badge-teal { background: rgba(74,240,196,0.1); color: var(--accent2); border: 1px solid rgba(74,240,196,0.2); }
+  .badge-pink { background: rgba(240,74,122,0.1); color: var(--accent3); border: 1px solid rgba(240,74,122,0.2); }
+  .badge-blue { background: rgba(74,144,240,0.1); color: #4a90f0; border: 1px solid rgba(74,144,240,0.2); }
+  .badge-gray { background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border); }
+
+  /* FORMS */
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    padding: 24px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .form-group.full { grid-column: 1 / -1; }
+
+  label {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  input, select, textarea {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13.5px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(232,196,74,0.08);
+  }
+
+  select option { background: var(--surface2); }
+
+  .form-actions {
+    padding: 0 24px 24px;
+    display: flex;
+    gap: 12px;
+  }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #080a0f;
+  }
+  .btn-primary:hover { background: #f0ce5a; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(232,196,74,0.3); }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--text-dim); color: var(--text); }
+
+  .btn-danger {
+    background: rgba(240,74,122,0.1);
+    color: var(--accent3);
+    border: 1px solid rgba(240,74,122,0.2);
+  }
+  .btn-danger:hover { background: rgba(240,74,122,0.2); }
+
+  .btn-teal {
+    background: rgba(74,240,196,0.1);
+    color: var(--accent2);
+    border: 1px solid rgba(74,240,196,0.2);
+  }
+  .btn-teal:hover { background: rgba(74,240,196,0.2); }
+
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+  /* TOAST */
+  .toast-container {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .toast {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 20px;
+    font-size: 13px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: slideIn 0.3s ease;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    max-width: 320px;
+  }
+
+  .toast.success { border-left: 3px solid var(--success); }
+  .toast.error { border-left: 3px solid var(--danger); }
+
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  /* SQL TERMINAL */
+  .sql-terminal {
+    background: #060809;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  .terminal-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .terminal-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .terminal-dot.red { background: #f04a4a; }
+  .terminal-dot.yellow { background: var(--accent); }
+  .terminal-dot.green { background: var(--accent2); }
+
+  .terminal-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-left: 6px;
+  }
+
+  .terminal-body { padding: 16px; }
+
+  .sql-input {
+    width: 100%;
+    min-height: 100px;
+    background: transparent;
+    border: none;
+    color: #4af0c4;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    resize: vertical;
+    outline: none;
+    line-height: 1.6;
+  }
+
+  .sql-input::placeholder { color: var(--text-dim); }
+
+  .terminal-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .sql-result {
+    background: #060809;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .sql-result-header {
+    padding: 10px 16px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .sql-output {
+    padding: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent2);
+    white-space: pre-wrap;
+    line-height: 1.6;
+    min-height: 60px;
+  }
+
+  .sql-error { color: var(--accent3); }
+  .sql-success { color: var(--accent2); }
+
+  /* ACTION BUTTONS IN TABLE */
+  .action-group { display: flex; gap: 6px; }
+
+  /* DASHBOARD GRID */
+  .dash-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+
+  .activity-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .activity-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .activity-icon.gold { background: rgba(232,196,74,0.1); }
+  .activity-icon.teal { background: rgba(74,240,196,0.1); }
+  .activity-icon.pink { background: rgba(240,74,122,0.1); }
+
+  .activity-text { font-size: 13px; color: var(--text); }
+  .activity-time { font-size: 11px; color: var(--text-dim); margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
+
+  /* TICKER SCORE */
+  .score-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .score-fill {
+    height: 4px;
+    border-radius: 2px;
+    flex: 1;
+    background: var(--border);
+    overflow: hidden;
+  }
+
+  .score-fill-inner {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--accent2);
+    transition: width 0.5s ease;
+  }
+
+  /* LOADING SCREEN */
+  #loading {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9998;
+    gap: 20px;
+  }
+
+  #loading .logo-main { font-size: 60px; letter-spacing: 10px; }
+
+  .loader {
+    width: 40px;
+    height: 2px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .loader::after {
+    content: '';
+    position: absolute;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: var(--accent);
+    animation: load 1.2s ease infinite;
+  }
+
+  @keyframes load {
+    to { left: 100%; }
+  }
+
+  .loading-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+
+  .empty-icon { font-size: 32px; margin-bottom: 12px; }
+
+  /* DIVIDER */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 0;
+  }
+
+  /* SCROLL */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="logo-main">NOVA</div>
+  <div class="loading-text">Initializing Database Engine</div>
+  <div class="loader"></div>
+</div>
+
+<div id="app" style="display:none">
+
+<header>
+  <div class="logo">
+    <div class="logo-main">NOVA</div>
+    <div class="logo-sub">Entertainment Agency</div>
+  </div>
+  <div class="db-status">
+    <div class="status-dot" id="dbDot"></div>
+    <span id="dbStatusText">Connecting...</span>
+  </div>
+</header>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <nav>
+    <div class="nav-section">
+      <div class="nav-label">Overview</div>
+      <div class="nav-item active" onclick="navigate('dashboard')">
+        <span class="nav-icon">◈</span> Dashboard
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Artists</div>
+      <div class="nav-item" onclick="navigate('artists')">
+        <span class="nav-icon">★</span> Artist Profiles
+      </div>
+      <div class="nav-item" onclick="navigate('trainees')">
+        <span class="nav-icon">◉</span> Trainees
+      </div>
+      <div class="nav-item" onclick="navigate('evaluations')">
+        <span class="nav-icon">◎</span> Evaluations
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Operations</div>
+      <div class="nav-item" onclick="navigate('concerts')">
+        <span class="nav-icon">♪</span> Concerts & Tours
+      </div>
+      <div class="nav-item" onclick="navigate('tickets')">
+        <span class="nav-icon">◆</span> Ticket Sales
+      </div>
+      <div class="nav-item" onclick="navigate('merchandise')">
+        <span class="nav-icon">▣</span> Merchandise
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">System</div>
+      <div class="nav-item" onclick="navigate('sql')">
+        <span class="nav-icon">⌥</span> SQL Terminal
+      </div>
+      <div class="nav-item" onclick="navigate('schema')">
+        <span class="nav-icon">∷</span> DB Schema
+      </div>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div>
+          <div class="page-title">DASHBOARD</div>
+          <div class="page-subtitle">Agency performance at a glance</div>
+        </div>
+        <button class="btn btn-secondary" onclick="refreshDashboard()">↻ Refresh</button>
+      </div>
+
+      <div class="stats-row" id="statsRow">
+        <div class="stat-card gold">
+          <div class="stat-label">Total Artists</div>
+          <div class="stat-value" id="statArtists">—</div>
+        </div>
+        <div class="stat-card teal">
+          <div class="stat-label">Active Trainees</div>
+          <div class="stat-value" id="statTrainees">—</div>
+        </div>
+        <div class="stat-card pink">
+          <div class="stat-label">Concerts Scheduled</div>
+          <div class="stat-value" id="statConcerts">—</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-label">Merch Items</div>
+          <div class="stat-value" id="statMerch">—</div>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="section">
+          <div class="section-header">
+            <span class="section-title">Top Artists</span>
+            <span class="badge badge-gold">by debut year</span>
+          </div>
+          <div id="dashArtists"></div>
+        </div>
+        <div class="section">
+          <div class="section-header">
+            <span class="section-title">Upcoming Concerts</span>
+            <span class="badge badge-teal">next 3</span>
+          </div>
+          <div id="dashConcerts"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Revenue Overview — Ticket Sales by Concert</span>
+        </div>
+        <div id="dashRevenue" style="padding:0"></div>
+      </div>
+    </div>
+
+    <!-- ARTISTS -->
+    <div class="page" id="page-artists">
+      <div class="page-header">
+        <div>
+          <div class="page-title">ARTISTS</div>
+          <div class="page-subtitle">Manage signed artist profiles and contracts</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Add New Artist</span>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Stage Name</label>
+            <input type="text" id="a_stage_name" placeholder="e.g. AURORA">
+          </div>
+          <div class="form-group">
+            <label>Real Name</label>
+            <input type="text" id="a_real_name" placeholder="Full legal name">
+          </div>
+          <div class="form-group">
+            <label>Genre</label>
+            <select id="a_genre">
+              <option value="K-Pop">K-Pop</option>
+              <option value="R&B">R&B</option>
+              <option value="Hip-Hop">Hip-Hop</option>
+              <option value="Pop">Pop</option>
+              <option value="EDM">EDM</option>
+              <option value="Indie">Indie</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Debut Year</label>
+            <input type="number" id="a_debut_year" placeholder="2024" min="1990" max="2030">
+          </div>
+          <div class="form-group">
+            <label>Contract End</label>
+            <input type="date" id="a_contract_end">
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select id="a_status">
+              <option value="Active">Active</option>
+              <option value="Hiatus">Hiatus</option>
+              <option value="Retired">Retired</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="addArtist()">＋ Add Artist</button>
+          <button class="btn btn-secondary" onclick="clearArtistForm()">Clear</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">All Artists</span>
+          <button class="btn btn-secondary btn-sm" onclick="loadArtists()">↻ Reload</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Stage Name</th>
+                <th>Real Name</th>
+                <th>Genre</th>
+                <th>Debut</th>
+                <th>Contract End</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="artistsTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRAINEES -->
+    <div class="page" id="page-trainees">
+      <div class="page-header">
+        <div>
+          <div class="page-title">TRAINEES</div>
+          <div class="page-subtitle">Track trainee progress and daily attendance</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header"><span class="section-title">Enroll New Trainee</span></div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="t_name" placeholder="Trainee name">
+          </div>
+          <div class="form-group">
+            <label>Date of Birth</label>
+            <input type="date" id="t_dob">
+          </div>
+          <div class="form-group">
+            <label>Specialty</label>
+            <select id="t_specialty">
+              <option value="Vocal">Vocal</option>
+              <option value="Dance">Dance</option>
+              <option value="Rap">Rap</option>
+              <option value="Instrumental">Instrumental</option>
+              <option value="All-Rounder">All-Rounder</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Enrollment Date</label>
+            <input type="date" id="t_enrolled">
+          </div>
+          <div class="form-group">
+            <label>Monthly Fee (₩)</label>
+            <input type="number" id="t_fee" placeholder="500000">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="addTrainee()">＋ Enroll Trainee</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Log Attendance</span>
+          <span class="badge badge-teal">Real-Time Update</span>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Trainee</label>
+            <select id="att_trainee_id"></select>
+          </div>
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" id="att_date">
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select id="att_status">
+              <option value="Present">Present</option>
+              <option value="Absent">Absent</option>
+              <option value="Late">Late</option>
+              <option value="Excused">Excused</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-teal" onclick="logAttendance()">✔ Log Attendance</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">All Trainees</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>DOB</th>
+                <th>Specialty</th>
+                <th>Enrolled</th>
+                <th>Monthly Fee</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="traineesTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- EVALUATIONS -->
+    <div class="page" id="page-evaluations">
+      <div class="page-header">
+        <div>
+          <div class="page-title">EVALUATIONS</div>
+          <div class="page-subtitle">Score trainees across skills — triggers artist debut consideration</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header"><span class="section-title">Submit Evaluation</span></div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Trainee</label>
+            <select id="ev_trainee_id"></select>
+          </div>
+          <div class="form-group">
+            <label>Evaluation Date</label>
+            <input type="date" id="ev_date">
+          </div>
+          <div class="form-group">
+            <label>Vocal Score (0–100)</label>
+            <input type="number" id="ev_vocal" min="0" max="100" placeholder="85">
+          </div>
+          <div class="form-group">
+            <label>Dance Score (0–100)</label>
+            <input type="number" id="ev_dance" min="0" max="100" placeholder="90">
+          </div>
+          <div class="form-group">
+            <label>Visual Score (0–100)</label>
+            <input type="number" id="ev_visual" min="0" max="100" placeholder="88">
+          </div>
+          <div class="form-group">
+            <label>Overall Score (0–100)</label>
+            <input type="number" id="ev_overall" min="0" max="100" placeholder="88">
+          </div>
+          <div class="form-group full">
+            <label>Evaluator Notes</label>
+            <textarea id="ev_notes" rows="2" placeholder="Performance notes, improvement areas..."></textarea>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="submitEvaluation()">Submit Evaluation</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Evaluation Records (JOIN: Trainees + Evaluations)</span>
+          <span class="badge badge-gold">SQL JOIN</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Trainee</th>
+                <th>Date</th>
+                <th>Vocal</th>
+                <th>Dance</th>
+                <th>Visual</th>
+                <th>Overall</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="evalsTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONCERTS -->
+    <div class="page" id="page-concerts">
+      <div class="page-header">
+        <div>
+          <div class="page-title">CONCERTS & TOURS</div>
+          <div class="page-subtitle">Schedule events and manage venues</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header"><span class="section-title">Schedule Concert</span></div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Concert Name</label>
+            <input type="text" id="c_name" placeholder="e.g. NOVA World Tour 2025">
+          </div>
+          <div class="form-group">
+            <label>Artist</label>
+            <select id="c_artist_id"></select>
+          </div>
+          <div class="form-group">
+            <label>Venue</label>
+            <input type="text" id="c_venue" placeholder="e.g. Seoul Olympic Stadium">
+          </div>
+          <div class="form-group">
+            <label>City</label>
+            <input type="text" id="c_city" placeholder="Seoul">
+          </div>
+          <div class="form-group">
+            <label>Concert Date</label>
+            <input type="date" id="c_date">
+          </div>
+          <div class="form-group">
+            <label>Capacity</label>
+            <input type="number" id="c_capacity" placeholder="50000">
+          </div>
+          <div class="form-group">
+            <label>Ticket Price (₩)</label>
+            <input type="number" id="c_price" placeholder="150000">
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select id="c_status">
+              <option value="Scheduled">Scheduled</option>
+              <option value="Ongoing">Ongoing</option>
+              <option value="Completed">Completed</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="addConcert()">＋ Schedule Concert</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Concert Schedule (JOIN: Artists + Concerts)</span>
+          <span class="badge badge-gold">SQL JOIN</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Concert</th>
+                <th>Artist</th>
+                <th>Venue</th>
+                <th>City</th>
+                <th>Date</th>
+                <th>Capacity</th>
+                <th>Ticket Price</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="concertsTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TICKETS -->
+    <div class="page" id="page-tickets">
+      <div class="page-header">
+        <div>
+          <div class="page-title">TICKET SALES</div>
+          <div class="page-subtitle">Real-time ticket sale logging and revenue tracking</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Record Ticket Sale</span>
+          <span class="badge badge-pink">Live Update</span>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Concert</label>
+            <select id="tk_concert_id"></select>
+          </div>
+          <div class="form-group">
+            <label>Buyer Name</label>
+            <input type="text" id="tk_buyer" placeholder="Customer name">
+          </div>
+          <div class="form-group">
+            <label>Quantity</label>
+            <input type="number" id="tk_qty" placeholder="1" min="1" max="10" value="1">
+          </div>
+          <div class="form-group">
+            <label>Seat Category</label>
+            <select id="tk_seat">
+              <option value="VIP">VIP</option>
+              <option value="Floor">Floor</option>
+              <option value="Upper Stand">Upper Stand</option>
+              <option value="General">General</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Sale Date</label>
+            <input type="date" id="tk_date">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="recordTicketSale()">＋ Record Sale</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Sales Records (JOIN: Concerts + Tickets)</span>
+          <span class="badge badge-gold">SQL JOIN</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Concert</th>
+                <th>Buyer</th>
+                <th>Qty</th>
+                <th>Seat</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+                <th>Sale Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="ticketsTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- MERCHANDISE -->
+    <div class="page" id="page-merchandise">
+      <div class="page-header">
+        <div>
+          <div class="page-title">MERCHANDISE</div>
+          <div class="page-subtitle">Inventory management with real-time stock updates</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header"><span class="section-title">Add Merchandise Item</span></div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Item Name</label>
+            <input type="text" id="m_name" placeholder="e.g. NOVA Photobook Vol.3">
+          </div>
+          <div class="form-group">
+            <label>Artist</label>
+            <select id="m_artist_id"></select>
+          </div>
+          <div class="form-group">
+            <label>Category</label>
+            <select id="m_category">
+              <option value="Photobook">Photobook</option>
+              <option value="Album">Album</option>
+              <option value="Apparel">Apparel</option>
+              <option value="Lightstick">Lightstick</option>
+              <option value="Poster">Poster</option>
+              <option value="Accessories">Accessories</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Price (₩)</label>
+            <input type="number" id="m_price" placeholder="45000">
+          </div>
+          <div class="form-group">
+            <label>Stock Quantity</label>
+            <input type="number" id="m_stock" placeholder="500">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="addMerchandise()">＋ Add Item</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Adjust Stock</span>
+          <span class="badge badge-teal">Real-Time Update</span>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Item</label>
+            <select id="stock_item_id"></select>
+          </div>
+          <div class="form-group">
+            <label>Adjustment (+/-)</label>
+            <input type="number" id="stock_adj" placeholder="e.g. -50 or +200">
+          </div>
+          <div class="form-group">
+            <label>Reason</label>
+            <input type="text" id="stock_reason" placeholder="e.g. Sold at Tokyo venue">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-teal" onclick="adjustStock()">⟳ Update Stock</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Inventory (JOIN: Artists + Merchandise)</span>
+          <span class="badge badge-gold">SQL JOIN</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Item Name</th>
+                <th>Artist</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Stock</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="merchandiseTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SQL TERMINAL -->
+    <div class="page" id="page-sql">
+      <div class="page-header">
+        <div>
+          <div class="page-title">SQL TERMINAL</div>
+          <div class="page-subtitle">Execute raw SQL — DDL, DML, DQL, Joins</div>
+        </div>
+      </div>
+
+      <div class="sql-terminal">
+        <div class="terminal-header">
+          <div class="terminal-dot red"></div>
+          <div class="terminal-dot yellow"></div>
+          <div class="terminal-dot green"></div>
+          <div class="terminal-title">nova_agency.db — SQL Shell</div>
+        </div>
+        <div class="terminal-body">
+          <textarea class="sql-input" id="sqlInput" placeholder="-- Enter any SQL query here
+-- Example:
+SELECT a.stage_name, COUNT(c.concert_id) as total_concerts, SUM(t.quantity * c.ticket_price) as revenue
+FROM Artists a
+LEFT JOIN Concerts c ON a.artist_id = c.artist_id
+LEFT JOIN Tickets t ON c.concert_id = t.concert_id
+GROUP BY a.artist_id
+ORDER BY revenue DESC;"></textarea>
+        </div>
+        <div class="terminal-actions">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-teal btn-sm" onclick="runSQL()">▶ Execute</button>
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('sqlInput').value=''">Clear</button>
+            <button class="btn btn-danger btn-sm" onclick="resetDatabase()" style="margin-left:12px">⚠ Reset DB</button>
+            <button class="btn btn-secondary btn-sm" onclick="loadSampleQuery('join')">JOIN Example</button>
+            <button class="btn btn-secondary btn-sm" onclick="loadSampleQuery('aggregate')">Aggregate</button>
+            <button class="btn btn-secondary btn-sm" onclick="loadSampleQuery('subquery')">Subquery</button>
+          </div>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim)">Ctrl+Enter to run</span>
+        </div>
+      </div>
+
+      <div class="sql-result">
+        <div class="sql-result-header">Output</div>
+        <div class="sql-output" id="sqlOutput">-- Results will appear here</div>
+      </div>
+    </div>
+
+    <!-- SCHEMA -->
+    <div class="page" id="page-schema">
+      <div class="page-header">
+        <div>
+          <div class="page-title">DB SCHEMA</div>
+          <div class="page-subtitle">Entity Relationship Overview</div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-header"><span class="section-title">Tables & Relationships</span></div>
+        <div style="padding:24px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent2);line-height:1.8;white-space:pre">
+Artists          (artist_id PK, stage_name, real_name, genre, debut_year, contract_end, status)
+    │
+    ├──▶ Concerts     (concert_id PK, name, artist_id FK, venue, city, concert_date, capacity, ticket_price, status)
+    │         │
+    │         └──▶ Tickets     (ticket_id PK, concert_id FK, buyer_name, quantity, seat_category, sale_date)
+    │
+    └──▶ Merchandise  (merch_id PK, item_name, artist_id FK, category, price, stock_quantity)
+
+Trainees         (trainee_id PK, full_name, dob, specialty, enrolled_date, monthly_fee, status)
+    │
+    ├──▶ Evaluations  (eval_id PK, trainee_id FK, eval_date, vocal_score, dance_score, visual_score, overall_score, notes)
+    │
+    └──▶ Attendance   (att_id PK, trainee_id FK, att_date, att_status)
+
+<span style="color:var(--text-dim)">──────────────────────────────────────────────────────</span>
+<span style="color:var(--accent)">DDL Operations:</span>  CREATE TABLE (with constraints, foreign keys, CHECK)
+<span style="color:var(--accent)">DML Operations:</span>  INSERT INTO, UPDATE SET, DELETE WHERE
+<span style="color:var(--accent)">DQL Operations:</span>  SELECT, WHERE, GROUP BY, ORDER BY, HAVING
+<span style="color:var(--accent)">Joins Used:</span>      INNER JOIN, LEFT JOIN across Artists↔Concerts↔Tickets
+                 Trainees↔Evaluations, Artists↔Merchandise
+<span style="color:var(--accent)">Constraints:</span>    PRIMARY KEY, FOREIGN KEY, NOT NULL, CHECK, DEFAULT</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+let db;
+let SQL;
+
+// INIT
+const DB_KEY = 'nova_agency_db_v1';
+
+function resetDatabase() {
+  if (!confirm('Reset all data back to defaults? All your added records will be lost.')) return;
+  localStorage.removeItem(DB_KEY);
+  toast('Database reset — reloading…');
+  setTimeout(() => location.reload(), 800);
+}
+
+
+function saveDB() {
+  try {
+    const data = db.export();
+    const b64 = btoa(String.fromCharCode(...data));
+    localStorage.setItem(DB_KEY, b64);
+  } catch(e) { console.warn('Save failed:', e); }
+}
+
+function loadSavedDB() {
+  try {
+    const b64 = localStorage.getItem(DB_KEY);
+    if (!b64) return false;
+    const binary = atob(b64);
+    const arr = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) arr[i] = binary.charCodeAt(i);
+    db = new SQL.Database(arr);
+    return true;
+  } catch(e) { return false; }
+}
+
+async function initDB() {
+  SQL = await initSqlJs({
+    locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/${file}`
+  });
+
+  const restored = loadSavedDB();
+  if (!restored) {
+    db = new SQL.Database();
+    createSchema();
+    seedData();
+    saveDB();
+  }
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('dbDot').classList.add('online');
+  document.getElementById('dbStatusText').textContent = restored
+    ? 'nova_agency.db · Restored ✓'
+    : 'nova_agency.db · Connected';
+  refreshDashboard();
+  loadArtists();
+  populateDropdowns();
+}
+
+function createSchema() {
+  db.run(`
+    CREATE TABLE IF NOT EXISTS Artists (
+      artist_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      stage_name TEXT NOT NULL UNIQUE,
+      real_name TEXT NOT NULL,
+      genre TEXT NOT NULL,
+      debut_year INTEGER CHECK(debut_year >= 1990 AND debut_year <= 2030),
+      contract_end DATE,
+      status TEXT DEFAULT 'Active' CHECK(status IN ('Active','Hiatus','Retired'))
+    );
+
+    CREATE TABLE IF NOT EXISTS Trainees (
+      trainee_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      full_name TEXT NOT NULL,
+      dob DATE,
+      specialty TEXT NOT NULL,
+      enrolled_date DATE NOT NULL DEFAULT (date('now')),
+      monthly_fee INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'Active' CHECK(status IN ('Active','Graduated','Terminated'))
+    );
+
+    CREATE TABLE IF NOT EXISTS Evaluations (
+      eval_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      trainee_id INTEGER NOT NULL REFERENCES Trainees(trainee_id) ON DELETE CASCADE,
+      eval_date DATE NOT NULL,
+      vocal_score INTEGER CHECK(vocal_score BETWEEN 0 AND 100),
+      dance_score INTEGER CHECK(dance_score BETWEEN 0 AND 100),
+      visual_score INTEGER CHECK(visual_score BETWEEN 0 AND 100),
+      overall_score INTEGER CHECK(overall_score BETWEEN 0 AND 100),
+      notes TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS Attendance (
+      att_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      trainee_id INTEGER NOT NULL REFERENCES Trainees(trainee_id) ON DELETE CASCADE,
+      att_date DATE NOT NULL,
+      att_status TEXT DEFAULT 'Present' CHECK(att_status IN ('Present','Absent','Late','Excused'))
+    );
+
+    CREATE TABLE IF NOT EXISTS Concerts (
+      concert_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      artist_id INTEGER REFERENCES Artists(artist_id),
+      venue TEXT NOT NULL,
+      city TEXT NOT NULL,
+      concert_date DATE NOT NULL,
+      capacity INTEGER CHECK(capacity > 0),
+      ticket_price INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'Scheduled' CHECK(status IN ('Scheduled','Ongoing','Completed','Cancelled'))
+    );
+
+    CREATE TABLE IF NOT EXISTS Tickets (
+      ticket_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      concert_id INTEGER NOT NULL REFERENCES Concerts(concert_id) ON DELETE CASCADE,
+      buyer_name TEXT NOT NULL,
+      quantity INTEGER DEFAULT 1 CHECK(quantity > 0),
+      seat_category TEXT DEFAULT 'General',
+      sale_date DATE NOT NULL DEFAULT (date('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS Merchandise (
+      merch_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      item_name TEXT NOT NULL,
+      artist_id INTEGER REFERENCES Artists(artist_id),
+      category TEXT NOT NULL,
+      price INTEGER DEFAULT 0,
+      stock_quantity INTEGER DEFAULT 0 CHECK(stock_quantity >= 0)
+    );
+  `);
+}
+
+function seedData() {
+  db.run(`INSERT INTO Artists (stage_name,real_name,genre,debut_year,contract_end,status) VALUES
+    ('ECLIPSE','Kim Soo-Jin','K-Pop',2019,'2026-12-31','Active'),
+    ('VORTEX','Park Ji-Ho','R&B',2021,'2027-06-30','Active'),
+    ('LUNAR','Lee Min-Seo','Pop',2020,'2025-11-30','Hiatus'),
+    ('CIPHER','Choi Hyun-Woo','Hip-Hop',2022,'2028-01-15','Active');
+
+    INSERT INTO Trainees (full_name,dob,specialty,enrolled_date,monthly_fee,status) VALUES
+    ('Kim Da-Eun','2006-03-12','Dance','2023-09-01',600000,'Active'),
+    ('Park Sung-Min','2005-07-22','Vocal','2022-11-15',550000,'Active'),
+    ('Lee Yuna','2007-01-08','All-Rounder','2024-01-10',650000,'Active'),
+    ('Jung Ha-Eun','2006-09-30','Rap','2023-04-01',580000,'Active');
+
+    INSERT INTO Evaluations (trainee_id,eval_date,vocal_score,dance_score,visual_score,overall_score,notes) VALUES
+    (1,'2024-06-01',72,95,88,85,'Outstanding stage presence and sharp choreography.'),
+    (2,'2024-06-01',91,78,85,88,'Powerful vocal range; needs work on lower body movement.'),
+    (3,'2024-06-15',88,90,92,91,'Remarkable all-rounder. Debut candidate.'),
+    (4,'2024-06-15',80,82,85,83,'Flow and delivery improving. Strong stage energy.');
+
+    INSERT INTO Concerts (name,artist_id,venue,city,concert_date,capacity,ticket_price,status) VALUES
+    ('ECLIPSE — LUMINARY TOUR','1','Seoul Olympic Stadium','Seoul','2025-03-15',45000,180000,'Completed'),
+    ('VORTEX Live in Tokyo','2','Budokan','Tokyo','2025-05-20',10000,220000,'Completed'),
+    ('ECLIPSE — LUMINARY TOUR','1','Madison Square Garden','New York','2025-07-04',20000,250000,'Scheduled'),
+    ('CIPHER HIP-HOP NIGHT','4','Olympic Hall','Seoul','2025-08-30',3000,95000,'Scheduled'),
+    ('VORTEX Paris Session','2','La Seine Musicale','Paris','2025-09-12',5000,190000,'Scheduled');
+
+    INSERT INTO Tickets (concert_id,buyer_name,quantity,seat_category,sale_date) VALUES
+    (1,'Min-Ji Park',2,'VIP','2025-01-10'),
+    (1,'Thomas Müller',4,'Floor','2025-01-15'),
+    (1,'Ji-Young Kang',1,'Upper Stand','2025-02-01'),
+    (2,'Hana Yamamoto',3,'Floor','2025-03-20'),
+    (2,'Kenji Watanabe',2,'VIP','2025-03-22'),
+    (3,'Sarah Chen',2,'VIP','2025-04-01'),
+    (3,'David Park',1,'Floor','2025-04-05');
+
+    INSERT INTO Merchandise (item_name,artist_id,category,price,stock_quantity) VALUES
+    ('ECLIPSE — LUMINARY Photobook',1,'Photobook',55000,320),
+    ('ECLIPSE Official Lightstick v3',1,'Lightstick',75000,580),
+    ('VORTEX Debut Album',2,'Album',35000,1200),
+    ('CIPHER Street Hoodie',4,'Apparel',89000,150),
+    ('LUNAR Poster Set',3,'Poster',22000,430),
+    ('VORTEX World Tour Tote',2,'Accessories',28000,800);
+  `);
+}
+
+// NAVIGATION
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  event.currentTarget.classList.add('active');
+
+  const loaders = {
+    artists: loadArtists,
+    trainees: loadTrainees,
+    evaluations: loadEvaluations,
+    concerts: loadConcerts,
+    tickets: loadTickets,
+    merchandise: loadMerchandise,
+    dashboard: refreshDashboard
+  };
+  if (loaders[page]) loaders[page]();
+  populateDropdowns();
+}
+
+// TOAST
+function toast(msg, type='success') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `${type==='success'?'✓':'✕'} ${msg}`;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// HELPERS
+function query(sql, params=[]) {
+  try {
+    const stmt = db.prepare(sql);
+    stmt.bind(params);
+    const rows = [];
+    while (stmt.step()) rows.push(stmt.getAsObject());
+    stmt.free();
+    return rows;
+  } catch(e) { return []; }
+}
+
+function run(sql, params=[]) {
+  try {
+    db.run(sql, params);
+    saveDB();
+    return true;
+  } catch(e) {
+    toast(e.message, 'error');
+    return false;
+  }
+}
+
+function fmt(n) { return n ? Number(n).toLocaleString('ko-KR') + '₩' : '—'; }
+
+// POPULATE DROPDOWNS
+function populateDropdowns() {
+  const artists = query('SELECT artist_id, stage_name FROM Artists ORDER BY stage_name');
+  const trainees = query('SELECT trainee_id, full_name FROM Trainees ORDER BY full_name');
+  const concerts = query('SELECT concert_id, name, city FROM Concerts ORDER BY concert_date');
+  const merch = query('SELECT merch_id, item_name FROM Merchandise ORDER BY item_name');
+
+  const fillSel = (id, rows, valKey, labelFn) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const prev = el.value;
+    el.innerHTML = rows.map(r => `<option value="${r[valKey]}">${labelFn(r)}</option>`).join('');
+    if (prev) el.value = prev;
+  };
+
+  ['c_artist_id','m_artist_id'].forEach(id => fillSel(id, artists, 'artist_id', r => r.stage_name));
+  ['att_trainee_id','ev_trainee_id'].forEach(id => fillSel(id, trainees, 'trainee_id', r => r.full_name));
+  fillSel('tk_concert_id', concerts, 'concert_id', r => `${r.name} (${r.city})`);
+  fillSel('stock_item_id', merch, 'merch_id', r => r.item_name);
+}
+
+// STATUS BADGE
+function statusBadge(s) {
+  const map = { Active:'badge-teal', Hiatus:'badge-gold', Retired:'badge-gray', Scheduled:'badge-blue', Ongoing:'badge-pink', Completed:'badge-gray', Cancelled:'badge-gray', Graduated:'badge-gold', Terminated:'badge-pink' };
+  return `<span class="badge ${map[s]||'badge-gray'}">${s}</span>`;
+}
+
+// DASHBOARD
+function refreshDashboard() {
+  const aCount = query('SELECT COUNT(*) as c FROM Artists')[0]?.c || 0;
+  const tCount = query("SELECT COUNT(*) as c FROM Trainees WHERE status='Active'")[0]?.c || 0;
+  const cCount = query("SELECT COUNT(*) as c FROM Concerts WHERE status='Scheduled'"  )[0]?.c || 0;
+  const mCount = query('SELECT COUNT(*) as c FROM Merchandise')[0]?.c || 0;
+
+  document.getElementById('statArtists').textContent = aCount;
+  document.getElementById('statTrainees').textContent = tCount;
+  document.getElementById('statConcerts').textContent = cCount;
+  document.getElementById('statMerch').textContent = mCount;
+
+  // Top artists
+  const artists = query('SELECT stage_name, genre, debut_year, status FROM Artists ORDER BY debut_year DESC LIMIT 4');
+  document.getElementById('dashArtists').innerHTML = artists.map(a =>
+    `<div class="activity-item">
+      <div class="activity-icon gold">★</div>
+      <div>
+        <div class="activity-text"><strong>${a.stage_name}</strong> · ${a.genre}</div>
+        <div class="activity-time">Debut ${a.debut_year} · ${statusBadge(a.status)}</div>
+      </div>
+    </div>`
+  ).join('');
+
+  // Upcoming concerts
+  const concerts = query(`SELECT c.name, a.stage_name, c.city, c.concert_date, c.status 
+    FROM Concerts c LEFT JOIN Artists a ON c.artist_id=a.artist_id 
+    ORDER BY c.concert_date LIMIT 4`);
+  document.getElementById('dashConcerts').innerHTML = concerts.map(c =>
+    `<div class="activity-item">
+      <div class="activity-icon teal">♪</div>
+      <div>
+        <div class="activity-text"><strong>${c.name}</strong></div>
+        <div class="activity-time">${c.city} · ${c.concert_date} · ${statusBadge(c.status)}</div>
+      </div>
+    </div>`
+  ).join('');
+
+  // Revenue
+  const rev = query(`SELECT c.name, c.city, COALESCE(SUM(t.quantity * c.ticket_price),0) as revenue, COALESCE(SUM(t.quantity),0) as sold
+    FROM Concerts c LEFT JOIN Tickets t ON c.concert_id=t.concert_id
+    GROUP BY c.concert_id ORDER BY revenue DESC`);
+  
+  const maxRev = Math.max(...rev.map(r => r.revenue), 1);
+  document.getElementById('dashRevenue').innerHTML = rev.map(r =>
+    `<div style="padding:14px 20px;border-top:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px">
+        <span>${r.name} <span style="color:var(--text-dim);font-size:11px">${r.city}</span></span>
+        <span style="color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:12px">${Number(r.revenue).toLocaleString()}₩</span>
+      </div>
+      <div class="score-bar">
+        <div class="score-fill"><div class="score-fill-inner" style="width:${Math.round(r.revenue/maxRev*100)}%;background:var(--accent)"></div></div>
+        <span style="font-size:11px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;min-width:60px;text-align:right">${r.sold} sold</span>
+      </div>
+    </div>`
+  ).join('');
+}
+
+// ARTISTS CRUD
+function addArtist() {
+  const v = { stage_name: document.getElementById('a_stage_name').value.trim(), real_name: document.getElementById('a_real_name').value.trim(), genre: document.getElementById('a_genre').value, debut_year: parseInt(document.getElementById('a_debut_year').value), contract_end: document.getElementById('a_contract_end').value, status: document.getElementById('a_status').value };
+  if (!v.stage_name || !v.real_name) return toast('Stage name and real name required','error');
+  if (run('INSERT INTO Artists (stage_name,real_name,genre,debut_year,contract_end,status) VALUES (?,?,?,?,?,?)', [v.stage_name,v.real_name,v.genre,v.debut_year||null,v.contract_end||null,v.status])) {
+    toast(`Artist ${v.stage_name} added`); loadArtists(); populateDropdowns(); clearArtistForm();
+  }
+}
+
+function clearArtistForm() {
+  ['a_stage_name','a_real_name','a_debut_year','a_contract_end'].forEach(id => document.getElementById(id).value='');
+}
+
+function deleteArtist(id) {
+  if (!confirm('Delete this artist and all related records?')) return;
+  run(`DELETE FROM Artists WHERE artist_id=?`,[id]);
+  toast('Artist deleted'); loadArtists(); populateDropdowns();
+}
+
+function loadArtists() {
+  const rows = query('SELECT * FROM Artists ORDER BY debut_year DESC');
+  document.getElementById('artistsTable').innerHTML = rows.length ? rows.map(r =>
+    `<tr>
+      <td>#${r.artist_id}</td><td><strong>${r.stage_name}</strong></td><td>${r.real_name}</td>
+      <td>${r.genre}</td><td>${r.debut_year||'—'}</td><td>${r.contract_end||'—'}</td>
+      <td>${statusBadge(r.status)}</td>
+      <td><div class="action-group"><button class="btn btn-danger btn-sm" onclick="deleteArtist(${r.artist_id})">Delete</button></div></td>
+    </tr>`
+  ).join('') : `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">★</div>No artists yet</div></td></tr>`;
+}
+
+// TRAINEES CRUD
+function addTrainee() {
+  const v = { name: document.getElementById('t_name').value.trim(), dob: document.getElementById('t_dob').value, specialty: document.getElementById('t_specialty').value, enrolled: document.getElementById('t_enrolled').value, fee: parseInt(document.getElementById('t_fee').value)||0 };
+  if (!v.name || !v.enrolled) return toast('Name and enrollment date required','error');
+  if (run('INSERT INTO Trainees (full_name,dob,specialty,enrolled_date,monthly_fee) VALUES (?,?,?,?,?)', [v.name,v.dob||null,v.specialty,v.enrolled,v.fee])) {
+    toast(`Trainee ${v.name} enrolled`); loadTrainees(); populateDropdowns();
+  }
+}
+
+function loadTrainees() {
+  const rows = query('SELECT * FROM Trainees ORDER BY enrolled_date DESC');
+  document.getElementById('traineesTable').innerHTML = rows.length ? rows.map(r =>
+    `<tr>
+      <td>#${r.trainee_id}</td><td><strong>${r.full_name}</strong></td><td>${r.dob||'—'}</td>
+      <td>${r.specialty}</td><td>${r.enrolled_date}</td>
+      <td style="font-family:'JetBrains Mono',monospace">${Number(r.monthly_fee).toLocaleString()}₩</td>
+      <td>${statusBadge(r.status)}</td>
+      <td><div class="action-group">
+        <button class="btn btn-secondary btn-sm" onclick="graduateTrainee(${r.trainee_id})">Graduate</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteTrainee(${r.trainee_id})">Delete</button>
+      </div></td>
+    </tr>`
+  ).join('') : `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">◉</div>No trainees enrolled</div></td></tr>`;
+}
+
+function graduateTrainee(id) {
+  run(`UPDATE Trainees SET status='Graduated' WHERE trainee_id=?`,[id]);
+  toast('Trainee graduated! 🎓'); loadTrainees();
+}
+
+function deleteTrainee(id) {
+  if (!confirm('Delete trainee?')) return;
+  run(`DELETE FROM Trainees WHERE trainee_id=?`,[id]);
+  toast('Trainee removed'); loadTrainees(); populateDropdowns();
+}
+
+function logAttendance() {
+  const tid = document.getElementById('att_trainee_id').value;
+  const date = document.getElementById('att_date').value;
+  const status = document.getElementById('att_status').value;
+  if (!tid || !date) return toast('Trainee and date required','error');
+  if (run('INSERT INTO Attendance (trainee_id,att_date,att_status) VALUES (?,?,?)',[tid,date,status])) {
+    toast(`Attendance logged: ${status}`);
+  }
+}
+
+// EVALUATIONS
+function submitEvaluation() {
+  const v = { tid: document.getElementById('ev_trainee_id').value, date: document.getElementById('ev_date').value, vocal: parseInt(document.getElementById('ev_vocal').value), dance: parseInt(document.getElementById('ev_dance').value), visual: parseInt(document.getElementById('ev_visual').value), overall: parseInt(document.getElementById('ev_overall').value), notes: document.getElementById('ev_notes').value.trim() };
+  if (!v.tid || !v.date) return toast('Trainee and date required','error');
+  if (run('INSERT INTO Evaluations (trainee_id,eval_date,vocal_score,dance_score,visual_score,overall_score,notes) VALUES (?,?,?,?,?,?,?)',[v.tid,v.date,v.vocal||null,v.dance||null,v.visual||null,v.overall||null,v.notes||null])) {
+    toast('Evaluation submitted'); loadEvaluations();
+  }
+}
+
+function loadEvaluations() {
+  const rows = query(`SELECT e.eval_id, t.full_name, e.eval_date, e.vocal_score, e.dance_score, e.visual_score, e.overall_score, e.notes
+    FROM Evaluations e INNER JOIN Trainees t ON e.trainee_id=t.trainee_id ORDER BY e.eval_date DESC`);
+  document.getElementById('evalsTable').innerHTML = rows.length ? rows.map(r =>
+    `<tr>
+      <td>#${r.eval_id}</td><td><strong>${r.full_name}</strong></td><td>${r.eval_date}</td>
+      <td><span style="color:var(--accent2)">${r.vocal_score??'—'}</span></td>
+      <td><span style="color:var(--accent2)">${r.dance_score??'—'}</span></td>
+      <td><span style="color:var(--accent2)">${r.visual_score??'—'}</span></td>
+      <td><span class="badge badge-gold">${r.overall_score??'—'}</span></td>
+      <td style="max-width:200px;font-size:12px;color:var(--text-muted)">${r.notes||'—'}</td>
+    </tr>`
+  ).join('') : `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">◎</div>No evaluations yet</div></td></tr>`;
+}
+
+// CONCERTS CRUD
+function addConcert() {
+  const v = { name: document.getElementById('c_name').value.trim(), aid: document.getElementById('c_artist_id').value, venue: document.getElementById('c_venue').value.trim(), city: document.getElementById('c_city').value.trim(), date: document.getElementById('c_date').value, cap: parseInt(document.getElementById('c_capacity').value)||0, price: parseInt(document.getElementById('c_price').value)||0, status: document.getElementById('c_status').value };
+  if (!v.name || !v.venue || !v.date) return toast('Name, venue, and date required','error');
+  if (run('INSERT INTO Concerts (name,artist_id,venue,city,concert_date,capacity,ticket_price,status) VALUES (?,?,?,?,?,?,?,?)',[v.name,v.aid||null,v.venue,v.city,v.date,v.cap,v.price,v.status])) {
+    toast(`Concert "${v.name}" scheduled`); loadConcerts(); populateDropdowns();
+  }
+}
+
+function deleteConcert(id) {
+  if (!confirm('Delete concert and all ticket records?')) return;
+  run(`DELETE FROM Concerts WHERE concert_id=?`,[id]);
+  toast('Concert deleted'); loadConcerts(); populateDropdowns();
+}
+
+function loadConcerts() {
+  const rows = query(`SELECT c.*, a.stage_name FROM Concerts c LEFT JOIN Artists a ON c.artist_id=a.artist_id ORDER BY c.concert_date`);
+  document.getElementById('concertsTable').innerHTML = rows.length ? rows.map(r =>
+    `<tr>
+      <td>#${r.concert_id}</td><td><strong>${r.name}</strong></td>
+      <td>${r.stage_name ? `<span class="badge badge-gold">${r.stage_name}</span>` : '—'}</td>
+      <td>${r.venue}</td><td>${r.city}</td><td>${r.concert_date}</td>
+      <td style="font-family:'JetBrains Mono',monospace">${Number(r.capacity).toLocaleString()}</td>
+      <td style="font-family:'JetBrains Mono',monospace">${Number(r.ticket_price).toLocaleString()}₩</td>
+      <td>${statusBadge(r.status)}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteConcert(${r.concert_id})">Delete</button></td>
+    </tr>`
+  ).join('') : `<tr><td colspan="10"><div class="empty-state"><div class="empty-icon">♪</div>No concerts scheduled</div></td></tr>`;
+}
+
+// TICKETS CRUD
+function recordTicketSale() {
+  const v = { cid: document.getElementById('tk_concert_id').value, buyer: document.getElementById('tk_buyer').value.trim(), qty: parseInt(document.getElementById('tk_qty').value)||1, seat: document.getElementById('tk_seat').value, date: document.getElementById('tk_date').value };
+  if (!v.cid || !v.buyer || !v.date) return toast('Concert, buyer, and date required','error');
+  if (run('INSERT INTO Tickets (concert_id,buyer_name,quantity,seat_category,sale_date) VALUES (?,?,?,?,?)',[v.cid,v.buyer,v.qty,v.seat,v.date])) {
+    toast(`Sale recorded for ${v.buyer}`); loadTickets(); refreshDashboard();
+  }
+}
+
+function deleteTicket(id) {
+  run(`DELETE FROM Tickets WHERE ticket_id=?`,[id]);
+  toast('Ticket record deleted'); loadTickets();
+}
+
+function loadTickets() {
+  const rows = query(`SELECT t.ticket_id, c.name as concert, t.buyer_name, t.quantity, t.seat_category, c.ticket_price, t.sale_date
+    FROM Tickets t INNER JOIN Concerts c ON t.concert_id=c.concert_id ORDER BY t.sale_date DESC`);
+  document.getElementById('ticketsTable').innerHTML = rows.length ? rows.map(r =>
+    `<tr>
+      <td>#${r.ticket_id}</td><td>${r.concert}</td><td>${r.buyer_name}</td>
+      <td style="font-family:'JetBrains Mono',monospace">${r.quantity}</td>
+      <td><span class="badge badge-blue">${r.seat_category}</span></td>
+      <td style="font-family:'JetBrains Mono',monospace">${Number(r.ticket_price).toLocaleString()}₩</td>
+      <td style="font-family:'JetBrains Mono',monospace;color:var(--accent)">${Number(r.quantity*r.ticket_price).toLocaleString()}₩</td>
+      <td>${r.sale_date}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteTicket(${r.ticket_id})">Delete</button></td>
+    </tr>`
+  ).join('') : `<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">◆</div>No ticket sales recorded</div></td></tr>`;
+}
+
+// MERCHANDISE CRUD
+function addMerchandise() {
+  const v = { name: document.getElementById('m_name').value.trim(), aid: document.getElementById('m_artist_id').value, cat: document.getElementById('m_category').value, price: parseInt(document.getElementById('m_price').value)||0, stock: parseInt(document.getElementById('m_stock').value)||0 };
+  if (!v.name) return toast('Item name required','error');
+  if (run('INSERT INTO Merchandise (item_name,artist_id,category,price,stock_quantity) VALUES (?,?,?,?,?)',[v.name,v.aid||null,v.cat,v.price,v.stock])) {
+    toast(`"${v.name}" added to inventory`); loadMerchandise(); populateDropdowns();
+  }
+}
+
+function adjustStock() {
+  const id = document.getElementById('stock_item_id').value;
+  const adj = parseInt(document.getElementById('stock_adj').value);
+  if (!id || isNaN(adj)) return toast('Select item and enter adjustment','error');
+  if (run('UPDATE Merchandise SET stock_quantity = MAX(0, stock_quantity + ?) WHERE merch_id=?',[adj,id])) {
+    toast(`Stock ${adj>0?'increased by +':'decreased by '}${Math.abs(adj)}`); loadMerchandise();
+  }
+}
+
+function deleteMerch(id) {
+  run(`DELETE FROM Merchandise WHERE merch_id=?`,[id]);
+  toast('Item removed'); loadMerchandise(); populateDropdowns();
+}
+
+function loadMerchandise() {
+  const rows = query(`SELECT m.*, a.stage_name FROM Merchandise m LEFT JOIN Artists a ON m.artist_id=a.artist_id ORDER BY m.category`);
+  document.getElementById('merchandiseTable').innerHTML = rows.length ? rows.map(r => {
+    const stock = r.stock_quantity;
+    const stockBadge = stock === 0 ? '<span class="badge badge-pink">Out of Stock</span>' : stock < 50 ? '<span class="badge badge-gold">Low Stock</span>' : '<span class="badge badge-teal">In Stock</span>';
+    return `<tr>
+      <td>#${r.merch_id}</td><td><strong>${r.item_name}</strong></td>
+      <td>${r.stage_name ? `<span class="badge badge-gold">${r.stage_name}</span>` : '—'}</td>
+      <td>${r.category}</td>
+      <td style="font-family:'JetBrains Mono',monospace">${Number(r.price).toLocaleString()}₩</td>
+      <td style="font-family:'JetBrains Mono',monospace">${Number(stock).toLocaleString()}</td>
+      <td>${stockBadge}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteMerch(${r.merch_id})">Delete</button></td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">▣</div>No merchandise items</div></td></tr>`;
+}
+
+// SQL TERMINAL
+function runSQL() {
+  const sql = document.getElementById('sqlInput').value.trim();
+  if (!sql) return;
+  const output = document.getElementById('sqlOutput');
+  try {
+    const result = db.exec(sql);
+    if (!result.length) {
+      output.className = 'sql-output sql-success';
+      output.textContent = '✓ Query executed successfully. No rows returned.';
+    } else {
+      const { columns, values } = result[0];
+      const colWidths = columns.map((c,i) => Math.max(c.length, ...values.map(r => String(r[i]??'NULL').length)));
+      const divider = colWidths.map(w => '─'.repeat(w+2)).join('┼');
+      const header = columns.map((c,i) => c.padEnd(colWidths[i])).join(' │ ');
+      const rows = values.map(r => r.map((v,i) => String(v??'NULL').padEnd(colWidths[i])).join(' │ '));
+      output.className = 'sql-output sql-success';
+      output.textContent = `${header}\n${divider}\n${rows.join('\n')}\n\n(${values.length} row${values.length!==1?'s':''} returned)`;
+    }
+  } catch(e) {
+    output.className = 'sql-output sql-error';
+    output.textContent = `✕ Error: ${e.message}`;
+  }
+}
+
+const sampleQueries = {
+  join: `-- INNER JOIN: Artist revenue from ticket sales
+SELECT 
+  a.stage_name AS Artist,
+  COUNT(DISTINCT c.concert_id) AS Concerts,
+  COALESCE(SUM(t.quantity), 0) AS Tickets_Sold,
+  COALESCE(SUM(t.quantity * c.ticket_price), 0) AS Total_Revenue
+FROM Artists a
+LEFT JOIN Concerts c ON a.artist_id = c.artist_id
+LEFT JOIN Tickets t ON c.concert_id = t.concert_id
+GROUP BY a.artist_id, a.stage_name
+ORDER BY Total_Revenue DESC;`,
+  aggregate: `-- Aggregate: Average evaluation scores per trainee
+SELECT 
+  t.full_name AS Trainee,
+  t.specialty,
+  ROUND(AVG(e.vocal_score), 1) AS Avg_Vocal,
+  ROUND(AVG(e.dance_score), 1) AS Avg_Dance,
+  ROUND(AVG(e.overall_score), 1) AS Avg_Overall,
+  COUNT(e.eval_id) AS Total_Evals
+FROM Trainees t
+LEFT JOIN Evaluations e ON t.trainee_id = e.trainee_id
+GROUP BY t.trainee_id
+HAVING Total_Evals > 0
+ORDER BY Avg_Overall DESC;`,
+  subquery: `-- Subquery: Trainees scoring above average overall
+SELECT full_name, specialty
+FROM Trainees
+WHERE trainee_id IN (
+  SELECT trainee_id FROM Evaluations
+  WHERE overall_score > (
+    SELECT AVG(overall_score) FROM Evaluations
+  )
+);`
+};
+
+function loadSampleQuery(key) {
+  document.getElementById('sqlInput').value = sampleQueries[key];
+}
+
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    if (document.getElementById('page-sql').classList.contains('active')) runSQL();
+  }
+});
+
+// SET DEFAULT DATES
+function setDefaultDates() {
+  const today = new Date().toISOString().split('T')[0];
+  ['t_enrolled','att_date','ev_date','c_date','tk_date'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = today;
+  });
+}
+
+// START
+initDB().then(() => { setDefaultDates(); }).catch(e => {
+  document.getElementById('loading').innerHTML = `<div style="color:var(--accent3);font-family:'JetBrains Mono',monospace;font-size:13px">Failed to load SQL engine: ${e.message}</div>`;
+});
+</script>
+</body>
+</html>
