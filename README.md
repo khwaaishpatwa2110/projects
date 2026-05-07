@@ -2,6 +2,8 @@
 
 > A fully browser-based, real-time agency management platform built as a **Database Management Systems (DBMS) practical project**. No server. No installation. Open the HTML file and your SQLite database starts instantly.
 
+### 🌐 [Live Demo → khwaaishpatwa2110.github.io/entertainment-agency](https://khwaaishpatwa2110.github.io/entertainment-agency/)
+
 ---
 
 ## 🎬 Overview
@@ -160,14 +162,20 @@ NOVA saves your database to `localStorage` automatically after every change — 
 
 ## 🚀 Getting Started
 
-### Option 1: Live Demo (Recommended)
-Access the full application instantly in your browser:
-**[https://khwaaishpatwa2110.github.io/entertainment-agency/](https://khwaaishpatwa2110.github.io/entertainment-agency/)**
+**Option 1 — Use the live demo (no download needed):**
 
-### Option 2: Local Setup
-1. Clone or download the repository:
-   `git clone https://github.com/khwaaishpatwa2110/entertainment-agency.git`
-2. Open `index.html` in any modern browser.
+🔗 **[https://khwaaishpatwa2110.github.io/entertainment-agency/](https://khwaaishpatwa2110.github.io/entertainment-agency/)**
+
+**Option 2 — Run locally:**
+
+```bash
+# 1. Clone or download the repository
+git clone https://github.com/khwaaishpatwa2110/entertainment-agency.git
+
+# 2. Open the file in any modern browser
+open entertainment_agency.html
+# or just double-click the file
+```
 
 That's it. The SQLite engine loads via CDN ([sql-wasm](https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/)) and the database initialises automatically.
 
@@ -245,10 +253,6 @@ This project was built as part of a **2nd Semester DBMS Practical** submission, 
 - ✅ Usability and real-world applicability
 
 ---
-
-## 📄 License
-
-This project is open source and available under the [MIT License](LICENSE).
 
 ---
 
